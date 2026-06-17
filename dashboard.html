@@ -313,7 +313,7 @@
             comments { totalCount }
             reviews(last: 20) { nodes { state } }
             reviewRequests { totalCount }
-            repository { nameWithOwner }
+            repository { nameWithOwner isArchived }
             headRef { target { ... on Commit { statusCheckRollup { state } } } }
           }
         }
@@ -324,7 +324,7 @@
             title number url updatedAt
             author { login }
             comments { totalCount }
-            repository { nameWithOwner }
+            repository { nameWithOwner isArchived }
             headRef { target { ... on Commit { statusCheckRollup { state } } } }
             reviewRequests(first: 10) { nodes { requestedReviewer { ... on User { login } } } }
           }
@@ -353,9 +353,9 @@
     const { viewer, myPRs, reviewRequests } = json.data;
     return {
       login: viewer.login,
-      myPRs: myPRs.nodes.filter(n => n?.title),
+      myPRs: myPRs.nodes.filter(n => n?.title && !n.repository?.isArchived),
       reviewRequestedPRs: reviewRequests.nodes
-        .filter(n => n?.title)
+        .filter(n => n?.title && !n.repository?.isArchived)
         .filter(n => n.reviewRequests?.nodes?.some(r => r.requestedReviewer?.login === viewer.login)),
     };
   }
