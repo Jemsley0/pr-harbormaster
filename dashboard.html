@@ -326,6 +326,7 @@
             comments { totalCount }
             repository { nameWithOwner }
             headRef { target { ... on Commit { statusCheckRollup { state } } } }
+            reviewRequests(first: 10) { nodes { requestedReviewer { ... on User { login } } } }
           }
         }
       }
@@ -353,7 +354,9 @@
     return {
       login: viewer.login,
       myPRs: myPRs.nodes.filter(n => n?.title),
-      reviewRequestedPRs: reviewRequests.nodes.filter(n => n?.title),
+      reviewRequestedPRs: reviewRequests.nodes
+        .filter(n => n?.title)
+        .filter(n => n.reviewRequests?.nodes?.some(r => r.requestedReviewer?.login === viewer.login)),
     };
   }
 
