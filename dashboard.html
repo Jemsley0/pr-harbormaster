@@ -396,6 +396,102 @@
     return columns;
   }
 
+  // ── Rendering ──────────────────────────────────────────────────────────
+  function escapeHtml(s) {
+    return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  }
+
+  function relativeTime(iso) {
+    const s = Math.floor((Date.now() - new Date(iso)) / 1000);
+    if (s < 60)  return 'just now';
+    if (s < 3600) return `${Math.floor(s/60)}m ago`;
+    if (s < 86400) return `${Math.floor(s/3600)}h ago`;
+    return `${Math.floor(s/86400)}d ago`;
+  }
+
+  function ciTag(pr) {
+    const state = pr.headRef?.target?.statusCheckRollup?.state ?? null;
+    if (!state)                              return '<span class="tag tag-gray">⊘ no CI</span>';
+    if (state === 'SUCCESS')                 return '<span class="tag tag-green">✓ CI passing</span>';
+    if (state === 'FAILURE' || state === 'ERROR') return '<span class="tag tag-red">✗ CI failing</span>';
+    return '<span class="tag tag-yellow">⟳ CI running</span>';
+  }
+
+  function renderCard(pr, variant) {
+    const repo = escapeHtml(pr.repository.nameWithOwner.split('/').pop());
+    const age  = relativeTime(pr.updatedAt);
+    const comments = pr.comments.totalCount;
+
+    let badges = '';
+    if (variant === 'stale') {
+      const days = Math.floor((Date.now() - new Date(pr.updatedAt)) / 86400000);
+      badges += `<span class="badge badge-stale">💤 ${days}d idle</span>`;
+      if (pr.isDraft) badges += '<span class="badge badge-draft">draft</span>';
+    } else if (variant === 'inProgress') {
+      badges += '<span class="badge badge-draft">draft</span>';
+    } else if (variant === 'reviewsTop') {
+      badges += '<span class="badge badge-me">authored by me</span>';
+    } else if (variant === 'reviewsBottom') {
+      badges += `<span class="badge badge-them">by ${escapeHtml(pr.author.login)}</span>`;
+    } else if (variant === 'ready') {
+      badges += '<span class="badge badge-deploy">✓ approved</span>';
+    }
+
+    if (variant === 'reviewsTop' && pr.reviewRequests?.totalCount > 0) {
+      badges += `<span class="tag tag-gray">👤 ${pr.reviewRequests.totalCount}</span>`;
+    }
+
+    const cardClass = variant === 'stale'  ? 'db-card db-card-stale'  :
+                      variant === 'ready'  ? 'db-card db-card-deploy' : 'db-card';
+
+    return `<a class="${cardClass}" href="${escapeHtml(pr.url)}" target="_blank" rel="noopener">
+      <div class="db-card-title">${escapeHtml(pr.title)}</div>
+      <div class="db-card-meta">${repo} · #${pr.number} · ${age}</div>
+      <div class="db-card-tags">${badges}${ciTag(pr)}<span class="tag tag-gray">💬 ${comments}</span></div>
+    </a>`;
+  }
+
+  function renderReviews(topCards, bottomCards) {
+    let html = '';
+    if (topCards.length) {
+      html += '<div class="reviews-divider">My PRs awaiting review</div>';
+      html += topCards.map(pr => renderCard(pr, 'reviewsTop')).join('');
+    }
+    if (bottomCards.length) {
+      html += '<div class="reviews-divider">PRs I need to review</div>';
+      html += bottomCards.map(pr => renderCard(pr, 'reviewsBottom')).join('');
+    }
+    if (!topCards.length && !bottomCards.length) {
+      html = '<div class="db-empty">No review activity</div>';
+    }
+    return html;
+  }
+
+  function render(columns, login) {
+    showDashboard(login);
+
+    const { stale, inProgress, reviewsTop, reviewsBottom, ready } = columns;
+
+    document.getElementById('cards-stale').innerHTML =
+      stale.length ? stale.map(pr => renderCard(pr, 'stale')).join('') :
+      '<div class="db-empty">No stale PRs 🎉</div>';
+
+    document.getElementById('cards-inprogress').innerHTML =
+      inProgress.length ? inProgress.map(pr => renderCard(pr, 'inProgress')).join('') :
+      '<div class="db-empty">No drafts in progress</div>';
+
+    document.getElementById('cards-reviews').innerHTML = renderReviews(reviewsTop, reviewsBottom);
+
+    document.getElementById('cards-ready').innerHTML =
+      ready.length ? ready.map(pr => renderCard(pr, 'ready')).join('') :
+      '<div class="db-empty">Merge it! 🎉</div>';
+
+    document.getElementById('count-stale').textContent      = stale.length;
+    document.getElementById('count-inprogress').textContent = inProgress.length;
+    document.getElementById('count-reviews').textContent    = reviewsTop.length + reviewsBottom.length;
+    document.getElementById('count-ready').textContent      = ready.length;
+  }
+
   // ── PAT setup handlers ─────────────────────────────────────────────────
   function saveAndInit() {
     const token = document.getElementById('pat-input').value.trim();
