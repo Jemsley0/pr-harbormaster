@@ -262,7 +262,80 @@
   </div>
 
   <script>
-    // placeholder — JS added in later tasks
-  </script>
+  // ── Constants ──────────────────────────────────────────────────────────
+  const PAT_KEY = 'gh_prd_pat';
+  const STALE_DAYS = 14;
+  const REFRESH_MS = 5 * 60 * 1000;
+
+  // ── Auth utilities ─────────────────────────────────────────────────────
+  function getPAT()        { return localStorage.getItem(PAT_KEY); }
+  function savePAT(token)  { localStorage.setItem(PAT_KEY, token.trim()); }
+  function clearPAT()      { localStorage.removeItem(PAT_KEY); }
+
+  // ── UI state ───────────────────────────────────────────────────────────
+  function showSetup(errorMsg = '') {
+    document.getElementById('setup-screen').classList.remove('hidden');
+    document.getElementById('dashboard').classList.add('hidden');
+    document.getElementById('setup-error').textContent = errorMsg;
+    document.getElementById('pat-input').value = '';
+    setTimeout(() => document.getElementById('pat-input').focus(), 50);
+  }
+
+  function showDashboard(username) {
+    document.getElementById('setup-screen').classList.add('hidden');
+    document.getElementById('dashboard').classList.remove('hidden');
+    document.getElementById('db-user').textContent = `@${username}`;
+  }
+
+  function showError(msg) {
+    const banner = document.getElementById('error-banner');
+    document.getElementById('error-msg').textContent = msg;
+    banner.classList.remove('hidden');
+  }
+
+  function hideError() {
+    document.getElementById('error-banner').classList.add('hidden');
+  }
+
+  function updateTimestamp() {
+    document.getElementById('db-updated').textContent =
+      `Updated ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
+  }
+
+  // ── PAT setup handlers ─────────────────────────────────────────────────
+  function saveAndInit() {
+    const token = document.getElementById('pat-input').value.trim();
+    if (!token) {
+      document.getElementById('setup-error').textContent = 'Please enter a token.';
+      return;
+    }
+    savePAT(token);
+    init();
+  }
+
+  document.getElementById('pat-input').addEventListener('keydown', e => {
+    if (e.key === 'Enter') saveAndInit();
+  });
+
+  function resetToken() {
+    clearPAT();
+    if (refreshTimer) clearInterval(refreshTimer);
+    showSetup();
+  }
+
+  // ── Refresh placeholders (filled in later tasks) ──────────────────────
+  let refreshTimer = null;
+  function manualRefresh() { /* filled in Task 6 */ }
+
+  // ── Init ───────────────────────────────────────────────────────────────
+  function init() {
+    const pat = getPAT();
+    if (!pat) { showSetup(); return; }
+    showDashboard('loading…');
+    // fetch will be wired up in Task 6
+  }
+
+  init();
+</script>
 </body>
 </html>
