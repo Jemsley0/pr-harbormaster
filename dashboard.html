@@ -357,6 +357,45 @@
     };
   }
 
+  // ── Data processing ────────────────────────────────────────────────────
+  const STALE_MS = STALE_DAYS * 24 * 60 * 60 * 1000;
+
+  function isStale(updatedAt) {
+    return Date.now() - new Date(updatedAt).getTime() > STALE_MS;
+  }
+
+  function isApproved(reviews) {
+    const nodes = reviews?.nodes ?? [];
+    return nodes.some(r => r.state === 'APPROVED') &&
+          !nodes.some(r => r.state === 'CHANGES_REQUESTED');
+  }
+
+  function byUpdatedDesc(a, b) {
+    return new Date(b.updatedAt) - new Date(a.updatedAt);
+  }
+
+  function processData(myPRs, reviewRequestedPRs) {
+    const columns = { stale: [], inProgress: [], reviewsTop: [], reviewsBottom: [], ready: [] };
+    const myPrKeys = new Set();
+
+    for (const pr of myPRs) {
+      myPrKeys.add(`${pr.number}/${pr.repository.nameWithOwner}`);
+      if (isStale(pr.updatedAt))      columns.stale.push(pr);
+      else if (isApproved(pr.reviews)) columns.ready.push(pr);
+      else if (pr.isDraft)             columns.inProgress.push(pr);
+      else                             columns.reviewsTop.push(pr);
+    }
+
+    for (const pr of reviewRequestedPRs) {
+      if (!myPrKeys.has(`${pr.number}/${pr.repository.nameWithOwner}`)) {
+        columns.reviewsBottom.push(pr);
+      }
+    }
+
+    for (const arr of Object.values(columns)) arr.sort(byUpdatedDesc);
+    return columns;
+  }
+
   // ── PAT setup handlers ─────────────────────────────────────────────────
   function saveAndInit() {
     const token = document.getElementById('pat-input').value.trim();
