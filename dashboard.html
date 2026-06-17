@@ -302,6 +302,61 @@
       `Updated ${new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}`;
   }
 
+  // ── GitHub API ─────────────────────────────────────────────────────────
+  const GQL_QUERY = `
+    query Dashboard {
+      viewer { login }
+      myPRs: search(query: "is:open is:pr author:@me", type: ISSUE, first: 50) {
+        nodes {
+          ... on PullRequest {
+            title number url updatedAt isDraft
+            comments { totalCount }
+            reviews(last: 10) { nodes { state } }
+            reviewRequests { totalCount }
+            repository { nameWithOwner }
+            headRef { target { ... on Commit { statusCheckRollup { state } } } }
+          }
+        }
+      }
+      reviewRequests: search(query: "is:open is:pr review-requested:@me", type: ISSUE, first: 50) {
+        nodes {
+          ... on PullRequest {
+            title number url updatedAt
+            author { login }
+            comments { totalCount }
+            repository { nameWithOwner }
+            headRef { target { ... on Commit { statusCheckRollup { state } } } }
+          }
+        }
+      }
+    }
+  `;
+
+  async function fetchDashboard(pat) {
+    const res = await fetch('https://api.github.com/graphql', {
+      method: 'POST',
+      headers: {
+        Authorization: `bearer ${pat}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ query: GQL_QUERY }),
+    });
+
+    if (res.status === 401) throw Object.assign(new Error('Invalid token'), { code: 'UNAUTHORIZED' });
+    if (res.status === 403 || res.status === 429) throw Object.assign(new Error('Rate limited'), { code: 'RATE_LIMITED' });
+    if (!res.ok) throw Object.assign(new Error(`HTTP ${res.status}`), { code: 'NETWORK_ERROR' });
+
+    const json = await res.json();
+    if (json.errors?.length) throw Object.assign(new Error(json.errors[0].message), { code: 'GRAPHQL_ERROR' });
+
+    const { viewer, myPRs, reviewRequests } = json.data;
+    return {
+      login: viewer.login,
+      myPRs: myPRs.nodes.filter(n => n?.title),
+      reviewRequestedPRs: reviewRequests.nodes.filter(n => n?.title),
+    };
+  }
+
   // ── PAT setup handlers ─────────────────────────────────────────────────
   function saveAndInit() {
     const token = document.getElementById('pat-input').value.trim();
