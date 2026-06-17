@@ -507,22 +507,52 @@
     if (e.key === 'Enter') saveAndInit();
   });
 
+  // ── Refresh loop ───────────────────────────────────────────────────────
+  let refreshTimer = null;
+
+  async function refresh() {
+    const pat = getPAT();
+    if (!pat) { showSetup(); return; }
+
+    try {
+      hideError();
+      const { login, myPRs, reviewRequestedPRs } = await fetchDashboard(pat);
+      const columns = processData(myPRs, reviewRequestedPRs);
+      render(columns, login);
+      updateTimestamp();
+    } catch (err) {
+      if (err.code === 'UNAUTHORIZED') {
+        clearPAT();
+        if (refreshTimer) clearInterval(refreshTimer);
+        showSetup('Token is invalid or expired. Please enter a new one.');
+        return;
+      }
+      if (err.code === 'RATE_LIMITED') {
+        showError('GitHub API rate limit reached — will retry on next refresh.');
+        return;
+      }
+      showError(`Failed to load PRs: ${err.message}`);
+    }
+  }
+
+  function manualRefresh() {
+    if (refreshTimer) clearInterval(refreshTimer);
+    refresh();
+    refreshTimer = setInterval(refresh, REFRESH_MS);
+  }
+
   function resetToken() {
     clearPAT();
     if (refreshTimer) clearInterval(refreshTimer);
     showSetup();
   }
 
-  // ── Refresh placeholders (filled in later tasks) ──────────────────────
-  let refreshTimer = null;
-  function manualRefresh() { /* filled in Task 6 */ }
-
   // ── Init ───────────────────────────────────────────────────────────────
-  function init() {
+  async function init() {
     const pat = getPAT();
     if (!pat) { showSetup(); return; }
-    showDashboard('loading…');
-    // fetch will be wired up in Task 6
+    await refresh();
+    refreshTimer = setInterval(refresh, REFRESH_MS);
   }
 
   init();
