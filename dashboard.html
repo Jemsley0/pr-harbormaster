@@ -311,7 +311,7 @@
           ... on PullRequest {
             title number url updatedAt isDraft
             comments { totalCount }
-            reviews(last: 10) { nodes { state } }
+            reviews(last: 20) { nodes { state } }
             reviewRequests { totalCount }
             repository { nameWithOwner }
             headRef { target { ... on Commit { statusCheckRollup { state } } } }
@@ -432,7 +432,7 @@
     } else if (variant === 'reviewsTop') {
       badges += '<span class="badge badge-me">authored by me</span>';
     } else if (variant === 'reviewsBottom') {
-      badges += `<span class="badge badge-them">by ${escapeHtml(pr.author.login)}</span>`;
+      badges += `<span class="badge badge-them">by ${escapeHtml(pr.author?.login ?? 'unknown')}</span>`;
     } else if (variant === 'ready') {
       badges += '<span class="badge badge-deploy">✓ approved</span>';
     }
@@ -444,7 +444,7 @@
     const cardClass = variant === 'stale'  ? 'db-card db-card-stale'  :
                       variant === 'ready'  ? 'db-card db-card-deploy' : 'db-card';
 
-    return `<a class="${cardClass}" href="${escapeHtml(pr.url)}" target="_blank" rel="noopener">
+    return `<a class="${cardClass}" href="${escapeHtml(pr.url)}" target="_blank" rel="noopener noreferrer">
       <div class="db-card-title">${escapeHtml(pr.title)}</div>
       <div class="db-card-meta">${repo} · #${pr.number} · ${age}</div>
       <div class="db-card-tags">${badges}${ciTag(pr)}<span class="tag tag-gray">💬 ${comments}</span></div>
@@ -528,7 +528,9 @@
         return;
       }
       if (err.code === 'RATE_LIMITED') {
-        showError('GitHub API rate limit reached — will retry on next refresh.');
+        if (refreshTimer) clearInterval(refreshTimer);
+        showError('GitHub API rate limit reached — retrying in 5 minutes.');
+        refreshTimer = setInterval(refresh, REFRESH_MS);
         return;
       }
       showError(`Failed to load PRs: ${err.message}`);
@@ -549,6 +551,7 @@
 
   // ── Init ───────────────────────────────────────────────────────────────
   async function init() {
+    if (refreshTimer) clearInterval(refreshTimer);
     const pat = getPAT();
     if (!pat) { showSetup(); return; }
     await refresh();
