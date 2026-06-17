@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>PRflow</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #0d1117;
+      --surface-1: #161b22;
+      --surface-2: #21262d;
+      --surface-3: #30363d;
+      --border:    #30363d;
+      --text:      #e6edf3;
+      --text-muted:#7d8590;
+      --accent:    #58a6ff;
+      --green:     #3fb950;
+      --red:       #f85149;
+      --yellow:    #d29922;
+      --amber:     #f59e0b;
+      --purple:    #a371f7;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      font-size: 13px;
+      min-height: 100vh;
+    }
+
+    /* ── Setup screen ── */
+    .setup-screen {
+      display: flex; align-items: center; justify-content: center;
+      min-height: 100vh; padding: 24px;
+    }
+    .setup-card {
+      background: var(--surface-1); border: 1px solid var(--border);
+      border-radius: 12px; padding: 32px; max-width: 440px; width: 100%;
+    }
+    .setup-card h1 { font-size: 20px; margin-bottom: 6px; }
+    .setup-card h1 span { color: var(--accent); }
+    .setup-card p { color: var(--text-muted); line-height: 1.6; margin-bottom: 16px; font-size: 13px; }
+    .setup-card .scopes {
+      background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 6px; padding: 10px 12px; margin-bottom: 16px; font-size: 12px;
+    }
+    .setup-card .scopes code { color: var(--accent); }
+    .setup-input {
+      width: 100%; background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 6px; padding: 8px 12px; color: var(--text); font-size: 13px;
+      font-family: monospace; margin-bottom: 10px; outline: none;
+    }
+    .setup-input:focus { border-color: var(--accent); }
+    .setup-btn {
+      width: 100%; background: var(--accent); color: #0d1117; border: none;
+      border-radius: 6px; padding: 9px; font-size: 13px; font-weight: 600;
+      cursor: pointer;
+    }
+    .setup-btn:hover { opacity: .9; }
+    .setup-error { color: var(--red); font-size: 12px; margin-top: 8px; min-height: 18px; }
+
+    /* ── Dashboard shell ── */
+    .db-shell { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+
+    .db-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 16px; border-bottom: 1px solid var(--border);
+      background: var(--surface-1); flex-shrink: 0;
+    }
+    .db-header-left { display: flex; align-items: center; gap: 10px; }
+    .db-logo { font-weight: 700; font-size: 14px; letter-spacing: -.3px; }
+    .db-logo span { color: var(--accent); }
+    .db-user {
+      font-size: 11px; color: var(--text-muted);
+      background: var(--surface-3); padding: 2px 8px; border-radius: 20px;
+    }
+    .db-header-right { display: flex; align-items: center; gap: 10px; }
+    .db-updated { font-size: 11px; color: var(--text-muted); }
+    .db-btn {
+      font-size: 11px; background: var(--surface-2); border: 1px solid var(--border);
+      border-radius: 6px; padding: 4px 10px; cursor: pointer; color: var(--text);
+    }
+    .db-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    /* ── Error banner ── */
+    .error-banner {
+      background: rgba(248, 81, 73, .1); border-bottom: 1px solid rgba(248,81,73,.3);
+      padding: 8px 16px; font-size: 12px; color: var(--red);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .retry-btn {
+      background: none; border: 1px solid var(--red); border-radius: 4px;
+      padding: 2px 8px; color: var(--red); cursor: pointer; font-size: 11px;
+    }
+
+    /* ── Column layout ── */
+    .db-cols {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      flex: 1; overflow: hidden;
+    }
+    .db-col {
+      border-right: 1px solid var(--border);
+      display: flex; flex-direction: column; overflow: hidden;
+    }
+    .db-col:last-child { border-right: none; }
+    .db-col-stale  { background: rgba(245,158,11,.02); }
+    .db-col-deploy { background: rgba(63,185,80,.02); }
+
+    .db-col-header {
+      padding: 10px 10px 8px; border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    .db-col-title {
+      font-weight: 600; font-size: 10.5px; text-transform: uppercase;
+      letter-spacing: .5px; color: var(--text-muted);
+      display: flex; align-items: center; gap: 6px;
+    }
+    .db-col-stale  .db-col-title { color: var(--amber); }
+    .db-col-deploy .db-col-title { color: var(--green); }
+    .db-col-reviews .db-col-title { color: var(--accent); }
+
+    .db-count {
+      font-size: 10px; background: var(--surface-3);
+      border-radius: 10px; padding: 1px 6px; font-weight: 600;
+      color: var(--text-muted);
+    }
+    .db-stale-note {
+      font-size: 10px; color: var(--text-muted); text-align: center;
+      padding: 4px 0 2px; font-style: italic; opacity: .6;
+    }
+
+    .db-cards { padding: 8px 8px; overflow-y: auto; flex: 1; }
+
+    /* ── Cards ── */
+    .db-card {
+      background: var(--surface-1); border: 1px solid var(--border);
+      border-radius: 7px; padding: 9px 10px; margin-bottom: 7px;
+      cursor: pointer; transition: border-color .12s, box-shadow .12s;
+      text-decoration: none; display: block;
+    }
+    .db-card:hover { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent); }
+    .db-card-stale  { border-color: rgba(245,158,11,.25); background: rgba(245,158,11,.03); }
+    .db-card-stale:hover  { border-color: var(--amber); box-shadow: 0 0 0 1px var(--amber); }
+    .db-card-deploy { border-color: rgba(63,185,80,.3); background: rgba(63,185,80,.04); }
+    .db-card-deploy:hover { border-color: var(--green); box-shadow: 0 0 0 1px var(--green); }
+
+    .db-card-title { font-weight: 600; font-size: 11.5px; line-height: 1.4; margin-bottom: 3px; color: var(--text); }
+    .db-card-meta  { font-size: 10px; color: var(--text-muted); margin-bottom: 7px; }
+    .db-card-tags  { display: flex; gap: 4px; flex-wrap: wrap; align-items: center; }
+
+    /* ── Tags & badges ── */
+    .tag, .badge {
+      font-size: 10px; padding: 2px 6px; border-radius: 10px; font-weight: 500;
+    }
+    .tag-green  { background: rgba(63,185,80,.15);  color: var(--green); }
+    .tag-red    { background: rgba(248,81,73,.15);  color: var(--red); }
+    .tag-yellow { background: rgba(210,153,34,.15); color: var(--yellow); }
+    .tag-gray   { background: var(--surface-3);     color: var(--text-muted); }
+    .badge-stale  { background: rgba(245,158,11,.2);  color: var(--amber); font-weight: 600; }
+    .badge-draft  { background: var(--surface-3);     color: var(--text-muted); font-weight: 600; }
+    .badge-me     { background: rgba(163,113,247,.15); color: var(--purple); font-weight: 600; }
+    .badge-them   { background: rgba(245,158,11,.12); color: #d97706; font-weight: 600; }
+    .badge-deploy { background: rgba(63,185,80,.2);   color: var(--green); font-weight: 600; }
+
+    /* ── Reviews column sections ── */
+    .reviews-divider {
+      font-size: 9.5px; font-weight: 700; text-transform: uppercase;
+      letter-spacing: .6px; color: var(--text-muted); opacity: .5;
+      padding: 8px 0 5px; border-bottom: 1px solid var(--border);
+      margin-bottom: 7px;
+    }
+    .reviews-divider:not(:first-child) { margin-top: 12px; }
+
+    /* ── Empty states ── */
+    .db-empty {
+      color: var(--text-muted); font-size: 11px;
+      text-align: center; padding: 24px 0; opacity: .5;
+    }
+
+    /* ── Hidden utility ── */
+    .hidden { display: none !important; }
+  </style>
+</head>
+<body>
+
+  <!-- Setup screen -->
+  <div id="setup-screen" class="setup-screen hidden">
+    <div class="setup-card">
+      <h1>PR<span>flow</span></h1>
+      <p>Enter a GitHub Personal Access Token to load your pull requests. The token is stored locally in your browser and never leaves your machine.</p>
+      <div class="scopes">
+        Required scopes: <code>repo</code> and <code>read:user</code>
+      </div>
+      <input id="pat-input" class="setup-input" type="password"
+             placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off" />
+      <button class="setup-btn" onclick="saveAndInit()">Save token</button>
+      <div id="setup-error" class="setup-error"></div>
+    </div>
+  </div>
+
+  <!-- Dashboard -->
+  <div id="dashboard" class="db-shell hidden">
+    <div class="db-header">
+      <div class="db-header-left">
+        <div class="db-logo">PR<span>flow</span></div>
+        <div id="db-user" class="db-user"></div>
+      </div>
+      <div class="db-header-right">
+        <span id="db-updated" class="db-updated"></span>
+        <button class="db-btn" onclick="manualRefresh()">⟳ Refresh</button>
+        <button class="db-btn" onclick="resetToken()">Reset token</button>
+      </div>
+    </div>
+
+    <div id="error-banner" class="error-banner hidden">
+      <span id="error-msg"></span>
+      <button class="retry-btn" onclick="manualRefresh()">Retry</button>
+    </div>
+
+    <div class="db-cols">
+      <div class="db-col db-col-stale">
+        <div class="db-col-header">
+          <div class="db-col-title">
+            💤 Stale <span id="count-stale" class="db-count">0</span>
+          </div>
+        </div>
+        <div class="db-stale-note">No activity for 14+ days</div>
+        <div id="cards-stale" class="db-cards"></div>
+      </div>
+
+      <div class="db-col">
+        <div class="db-col-header">
+          <div class="db-col-title">
+            🔨 In Progress <span id="count-inprogress" class="db-count">0</span>
+          </div>
+        </div>
+        <div id="cards-inprogress" class="db-cards"></div>
+      </div>
+
+      <div class="db-col db-col-reviews">
+        <div class="db-col-header">
+          <div class="db-col-title">
+            🔍 Reviews <span id="count-reviews" class="db-count">0</span>
+          </div>
+        </div>
+        <div id="cards-reviews" class="db-cards"></div>
+      </div>
+
+      <div class="db-col db-col-deploy">
+        <div class="db-col-header">
+          <div class="db-col-title">
+            🚀 Ready to Deploy <span id="count-ready" class="db-count">0</span>
+          </div>
+        </div>
+        <div id="cards-ready" class="db-cards"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // placeholder — JS added in later tasks
+  </script>
+</body>
+</html>
