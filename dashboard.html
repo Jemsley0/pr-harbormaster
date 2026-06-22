@@ -336,7 +336,7 @@
         nodes {
           ... on PullRequest {
             title number url updatedAt reviewDecision
-            author { login }
+            author { __typename login }
             comments { totalCount }
             reviews(last: 20) { nodes { state author { login } } }
             reviewRequests { totalCount }
@@ -374,6 +374,9 @@
         .filter(n => n.reviewRequests?.nodes?.some(r => r.requestedReviewer?.login === viewer.login)),
       reviewedByMePRs: reviewedByMe.nodes
         .filter(n => n?.title && !n.repository?.isArchived)
+        // Only agent/bot-authored PRs I approved stay (I'm driving them through);
+        // human-authored PRs I approved are no longer my responsibility.
+        .filter(n => n.author?.__typename === 'Bot')
         .filter(n => n.reviews?.nodes?.some(r => r.author?.login === viewer.login && r.state === 'APPROVED')),
     };
   }
