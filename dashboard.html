@@ -164,7 +164,8 @@
     .badge-draft  { background: var(--surface-3);     color: var(--text-muted); font-weight: 600; }
     .badge-me     { background: rgba(163,113,247,.15); color: var(--purple); font-weight: 600; }
     .badge-them   { background: rgba(245,158,11,.12); color: var(--amber-dark); font-weight: 600; }
-    .badge-deploy { background: rgba(63,185,80,.2);   color: var(--green); font-weight: 600; }
+    .badge-deploy    { background: rgba(63,185,80,.2);   color: var(--green); font-weight: 600; }
+    .badge-approved  { background: rgba(20,184,166,.15); color: #14b8a6;      font-weight: 600; }
 
     /* ── Reviews column sections ── */
     .reviews-divider {
@@ -330,6 +331,18 @@
           }
         }
       }
+      reviewedByMe: search(query: "is:open is:pr reviewed-by:@me -author:@me", type: ISSUE, first: 50) {
+        nodes {
+          ... on PullRequest {
+            title number url updatedAt
+            author { login }
+            comments { totalCount }
+            reviews(last: 20) { nodes { state author { login } } }
+            repository { nameWithOwner isArchived }
+            headRef { target { ... on Commit { statusCheckRollup { state } } } }
+          }
+        }
+      }
     }
   `;
 
@@ -350,13 +363,16 @@
     const json = await res.json();
     if (json.errors?.length) throw Object.assign(new Error(json.errors[0].message), { code: 'GRAPHQL_ERROR' });
 
-    const { viewer, myPRs, reviewRequests } = json.data;
+    const { viewer, myPRs, reviewRequests, reviewedByMe } = json.data;
     return {
       login: viewer.login,
       myPRs: myPRs.nodes.filter(n => n?.title && !n.repository?.isArchived),
       reviewRequestedPRs: reviewRequests.nodes
         .filter(n => n?.title && !n.repository?.isArchived)
         .filter(n => n.reviewRequests?.nodes?.some(r => r.requestedReviewer?.login === viewer.login)),
+      reviewedByMePRs: reviewedByMe.nodes
+        .filter(n => n?.title && !n.repository?.isArchived)
+        .filter(n => n.reviews?.nodes?.some(r => r.author?.login === viewer.login && r.state === 'APPROVED')),
     };
   }
 
@@ -377,22 +393,33 @@
     return new Date(b.updatedAt) - new Date(a.updatedAt);
   }
 
-  function processData(myPRs, reviewRequestedPRs) {
+  function processData(myPRs, reviewRequestedPRs, reviewedByMePRs) {
     const columns = { stale: [], inProgress: [], reviewsTop: [], reviewsBottom: [], ready: [] };
-    const myPrKeys = new Set();
+    const seenKeys = new Set();
 
     for (const pr of myPRs) {
-      myPrKeys.add(`${pr.number}/${pr.repository.nameWithOwner}`);
-      if (isStale(pr.updatedAt))      columns.stale.push(pr);
-      else if (isApproved(pr.reviews)) columns.ready.push(pr);
-      else if (pr.isDraft)             columns.inProgress.push(pr);
-      else                             columns.reviewsTop.push(pr);
+      seenKeys.add(`${pr.number}/${pr.repository.nameWithOwner}`);
+      if (isStale(pr.updatedAt))       columns.stale.push(pr);
+      else if (isApproved(pr.reviews))  columns.ready.push(pr);
+      else if (pr.isDraft)              columns.inProgress.push(pr);
+      else                              columns.reviewsTop.push(pr);
     }
 
     for (const pr of reviewRequestedPRs) {
-      if (!myPrKeys.has(`${pr.number}/${pr.repository.nameWithOwner}`)) {
+      const key = `${pr.number}/${pr.repository.nameWithOwner}`;
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key);
         columns.reviewsBottom.push(pr);
       }
+    }
+
+    for (const pr of reviewedByMePRs) {
+      const key = `${pr.number}/${pr.repository.nameWithOwner}`;
+      if (seenKeys.has(key)) continue;
+      seenKeys.add(key);
+      if (isStale(pr.updatedAt))       columns.stale.push(pr);
+      else if (isApproved(pr.reviews))  columns.ready.push(pr);
+      else                              columns.reviewsTop.push({ ...pr, _approvedByMe: true });
     }
 
     for (const arr of Object.values(columns)) arr.sort(byUpdatedDesc);
@@ -433,7 +460,9 @@
     } else if (variant === 'inProgress') {
       badges += '<span class="badge badge-draft">draft</span>';
     } else if (variant === 'reviewsTop') {
-      badges += '<span class="badge badge-me">authored by me</span>';
+      badges += pr._approvedByMe
+        ? '<span class="badge badge-approved">✓ approved by me</span>'
+        : '<span class="badge badge-me">authored by me</span>';
     } else if (variant === 'reviewsBottom') {
       badges += `<span class="badge badge-them">by ${escapeHtml(pr.author?.login ?? 'unknown')}</span>`;
     } else if (variant === 'ready') {
@@ -519,8 +548,8 @@
 
     try {
       hideError();
-      const { login, myPRs, reviewRequestedPRs } = await fetchDashboard(pat);
-      const columns = processData(myPRs, reviewRequestedPRs);
+      const { login, myPRs, reviewRequestedPRs, reviewedByMePRs } = await fetchDashboard(pat);
+      const columns = processData(myPRs, reviewRequestedPRs, reviewedByMePRs);
       render(columns, login);
       updateTimestamp();
     } catch (err) {
