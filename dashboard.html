@@ -311,7 +311,7 @@
       myPRs: search(query: "is:open is:pr author:@me", type: ISSUE, first: 50) {
         nodes {
           ... on PullRequest {
-            title number url updatedAt isDraft
+            title number url updatedAt isDraft reviewDecision
             comments { totalCount }
             reviews(last: 20) { nodes { state } }
             reviewRequests { totalCount }
@@ -335,7 +335,7 @@
       reviewedByMe: search(query: "is:open is:pr reviewed-by:@me -author:@me", type: ISSUE, first: 50) {
         nodes {
           ... on PullRequest {
-            title number url updatedAt
+            title number url updatedAt reviewDecision
             author { login }
             comments { totalCount }
             reviews(last: 20) { nodes { state author { login } } }
@@ -385,8 +385,13 @@
     return Date.now() - new Date(updatedAt).getTime() > STALE_MS;
   }
 
-  function isApproved(reviews) {
-    const nodes = reviews?.nodes ?? [];
+  // Ready to deploy = branch protection satisfied (reviewDecision APPROVED),
+  // or — for repos without required reviews (reviewDecision null) — an
+  // approval exists with no outstanding change requests.
+  function isReadyToDeploy(pr) {
+    if (pr.reviewDecision === 'APPROVED') return true;
+    if (pr.reviewDecision) return false; // REVIEW_REQUIRED or CHANGES_REQUESTED
+    const nodes = pr.reviews?.nodes ?? [];
     return nodes.some(r => r.state === 'APPROVED') &&
           !nodes.some(r => r.state === 'CHANGES_REQUESTED');
   }
@@ -401,10 +406,10 @@
 
     for (const pr of myPRs) {
       seenKeys.add(`${pr.number}/${pr.repository.nameWithOwner}`);
-      if (isStale(pr.updatedAt))       columns.stale.push(pr);
-      else if (isApproved(pr.reviews))  columns.ready.push(pr);
-      else if (pr.isDraft)              columns.inProgress.push(pr);
-      else                              columns.reviewsTop.push(pr);
+      if (isStale(pr.updatedAt))         columns.stale.push(pr);
+      else if (isReadyToDeploy(pr))       columns.ready.push(pr);
+      else if (pr.isDraft)                columns.inProgress.push(pr);
+      else                                columns.reviewsTop.push(pr);
     }
 
     for (const pr of reviewRequestedPRs) {
@@ -419,10 +424,9 @@
       const key = `${pr.number}/${pr.repository.nameWithOwner}`;
       if (seenKeys.has(key)) continue;
       seenKeys.add(key);
-      const noPendingReviewers = (pr.reviewRequests?.totalCount ?? 0) === 0;
-      if (isStale(pr.updatedAt))                          columns.stale.push(pr);
-      else if (isApproved(pr.reviews) && noPendingReviewers) columns.ready.push(pr);
-      else                                                columns.reviewsTop.push({ ...pr, _approvedByMe: true });
+      if (isStale(pr.updatedAt))     columns.stale.push(pr);
+      else if (isReadyToDeploy(pr))   columns.ready.push(pr);
+      else                            columns.reviewsTop.push({ ...pr, _approvedByMe: true });
     }
 
     for (const arr of Object.values(columns)) arr.sort(byUpdatedDesc);
