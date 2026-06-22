@@ -339,6 +339,7 @@
             author { login }
             comments { totalCount }
             reviews(last: 20) { nodes { state author { login } } }
+            reviewRequests { totalCount }
             repository { nameWithOwner isArchived }
             headRef { target { ... on Commit { statusCheckRollup { state } } } }
           }
@@ -418,9 +419,10 @@
       const key = `${pr.number}/${pr.repository.nameWithOwner}`;
       if (seenKeys.has(key)) continue;
       seenKeys.add(key);
-      if (isStale(pr.updatedAt))       columns.stale.push(pr);
-      else if (isApproved(pr.reviews))  columns.ready.push(pr);
-      else                              columns.reviewsTop.push({ ...pr, _approvedByMe: true });
+      const noPendingReviewers = (pr.reviewRequests?.totalCount ?? 0) === 0;
+      if (isStale(pr.updatedAt))                          columns.stale.push(pr);
+      else if (isApproved(pr.reviews) && noPendingReviewers) columns.ready.push(pr);
+      else                                                columns.reviewsTop.push({ ...pr, _approvedByMe: true });
     }
 
     for (const arr of Object.values(columns)) arr.sort(byUpdatedDesc);
