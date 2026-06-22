@@ -188,6 +188,12 @@
 </head>
 <body>
 
+  <!-- Top-level error banner (shown even before dashboard loads) -->
+  <div id="error-banner" class="error-banner hidden" style="position:fixed;top:0;left:0;right:0;z-index:100">
+    <span id="error-msg"></span>
+    <button class="retry-btn" onclick="manualRefresh()">Retry</button>
+  </div>
+
   <!-- Setup screen -->
   <div id="setup-screen" class="setup-screen hidden">
     <div class="setup-card">
@@ -215,11 +221,6 @@
         <button class="db-btn" onclick="manualRefresh()">⟳ Refresh</button>
         <button class="db-btn" onclick="resetToken()">Reset token</button>
       </div>
-    </div>
-
-    <div id="error-banner" class="error-banner hidden">
-      <span id="error-msg"></span>
-      <button class="retry-btn" onclick="manualRefresh()">Retry</button>
     </div>
 
     <div class="db-cols">
