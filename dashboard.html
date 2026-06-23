@@ -348,19 +348,40 @@
     }
   `;
 
-  async function fetchDashboard(pat) {
-    const res = await fetch('https://api.github.com/graphql', {
-      method: 'POST',
-      headers: {
-        Authorization: `bearer ${pat}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ query: GQL_QUERY }),
-    });
+  const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+  // GitHub's GraphQL backend intermittently 502s on this heavy multi-search
+  // query. Retry transient 5xx / network failures with backoff before giving up.
+  async function graphqlRequest(pat, attempt = 0) {
+    const MAX_RETRIES = 3;
+    let res;
+    try {
+      res = await fetch('https://api.github.com/graphql', {
+        method: 'POST',
+        headers: {
+          Authorization: `bearer ${pat}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ query: GQL_QUERY }),
+      });
+    } catch (e) {
+      // Network-level failure (offline, DNS, CORS). Retry, then surface.
+      if (attempt < MAX_RETRIES) { await sleep(500 * (attempt + 1)); return graphqlRequest(pat, attempt + 1); }
+      throw Object.assign(new Error('Network request failed'), { code: 'NETWORK_ERROR' });
+    }
 
     if (res.status === 401) throw Object.assign(new Error('Invalid token'), { code: 'UNAUTHORIZED' });
     if (res.status === 403 || res.status === 429) throw Object.assign(new Error('Rate limited'), { code: 'RATE_LIMITED' });
+    if (res.status >= 500) {
+      if (attempt < MAX_RETRIES) { await sleep(500 * (attempt + 1)); return graphqlRequest(pat, attempt + 1); }
+      throw Object.assign(new Error(`GitHub is temporarily unavailable (HTTP ${res.status})`), { code: 'NETWORK_ERROR' });
+    }
     if (!res.ok) throw Object.assign(new Error(`HTTP ${res.status}`), { code: 'NETWORK_ERROR' });
+    return res;
+  }
+
+  async function fetchDashboard(pat) {
+    const res = await graphqlRequest(pat);
 
     const json = await res.json();
     if (json.errors?.length) throw Object.assign(new Error(json.errors[0].message), { code: 'GRAPHQL_ERROR' });
