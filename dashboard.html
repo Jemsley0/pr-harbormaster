@@ -305,54 +305,50 @@
   }
 
   // ── GitHub API ─────────────────────────────────────────────────────────
-  const GQL_QUERY = `
-    query Dashboard {
-      viewer { login }
-      myPRs: search(query: "is:open is:pr author:@me", type: ISSUE, first: 50) {
-        nodes {
-          ... on PullRequest {
-            title number url updatedAt isDraft reviewDecision
-            comments { totalCount }
-            reviews(last: 20) { nodes { state } }
-            reviewRequests { totalCount }
-            repository { nameWithOwner isArchived }
-            headRef { target { ... on Commit { statusCheckRollup { state } } } }
-          }
-        }
-      }
-      reviewRequests: search(query: "is:open is:pr review-requested:@me", type: ISSUE, first: 50) {
-        nodes {
-          ... on PullRequest {
-            title number url updatedAt
-            author { login }
-            comments { totalCount }
-            repository { nameWithOwner isArchived }
-            headRef { target { ... on Commit { statusCheckRollup { state } } } }
-            reviewRequests(first: 10) { nodes { requestedReviewer { ... on User { login } } } }
-          }
-        }
-      }
-      reviewedByMe: search(query: "is:open is:pr reviewed-by:@me -author:@me", type: ISSUE, first: 50) {
-        nodes {
-          ... on PullRequest {
-            title number url updatedAt reviewDecision
-            author { __typename login }
-            comments { totalCount }
-            reviews(last: 20) { nodes { state author { login } } }
-            reviewRequests { totalCount }
-            repository { nameWithOwner isArchived }
-            headRef { target { ... on Commit { statusCheckRollup { state } } } }
-          }
-        }
-      }
-    }
-  `;
+  // GitHub's GraphQL backend 502s on a single heavy query that batches all
+  // three searches. Each search is reliable on its own, so we send them as
+  // three separate (parallel) requests instead.
+  const Q_MY_PRS = `
+    query { viewer { login }
+      search(query: "is:open is:pr author:@me", type: ISSUE, first: 50) {
+        nodes { ... on PullRequest {
+          title number url updatedAt isDraft reviewDecision
+          comments { totalCount }
+          reviews(last: 20) { nodes { state } }
+          reviewRequests { totalCount }
+          repository { nameWithOwner isArchived }
+          headRef { target { ... on Commit { statusCheckRollup { state } } } }
+        } } } }`;
+
+  const Q_REVIEW_REQUESTS = `
+    query {
+      search(query: "is:open is:pr review-requested:@me", type: ISSUE, first: 50) {
+        nodes { ... on PullRequest {
+          title number url updatedAt
+          author { login }
+          comments { totalCount }
+          repository { nameWithOwner isArchived }
+          headRef { target { ... on Commit { statusCheckRollup { state } } } }
+          reviewRequests(first: 10) { nodes { requestedReviewer { ... on User { login } } } }
+        } } } }`;
+
+  const Q_REVIEWED_BY_ME = `
+    query {
+      search(query: "is:open is:pr reviewed-by:@me -author:@me", type: ISSUE, first: 50) {
+        nodes { ... on PullRequest {
+          title number url updatedAt reviewDecision
+          author { __typename login }
+          comments { totalCount }
+          reviews(last: 20) { nodes { state author { login } } }
+          reviewRequests { totalCount }
+          repository { nameWithOwner isArchived }
+          headRef { target { ... on Commit { statusCheckRollup { state } } } }
+        } } } }`;
 
   const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-  // GitHub's GraphQL backend intermittently 502s on this heavy multi-search
-  // query. Retry transient 5xx / network failures with backoff before giving up.
-  async function graphqlRequest(pat, attempt = 0) {
+  // Send one GraphQL query, retrying transient 5xx / network failures with backoff.
+  async function graphqlRequest(pat, query, attempt = 0) {
     const MAX_RETRIES = 3;
     let res;
     try {
@@ -362,43 +358,47 @@
           Authorization: `bearer ${pat}`,
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ query: GQL_QUERY }),
+        body: JSON.stringify({ query }),
       });
     } catch (e) {
       // Network-level failure (offline, DNS, CORS). Retry, then surface.
-      if (attempt < MAX_RETRIES) { await sleep(500 * (attempt + 1)); return graphqlRequest(pat, attempt + 1); }
+      if (attempt < MAX_RETRIES) { await sleep(500 * (attempt + 1)); return graphqlRequest(pat, query, attempt + 1); }
       throw Object.assign(new Error('Network request failed'), { code: 'NETWORK_ERROR' });
     }
 
     if (res.status === 401) throw Object.assign(new Error('Invalid token'), { code: 'UNAUTHORIZED' });
     if (res.status === 403 || res.status === 429) throw Object.assign(new Error('Rate limited'), { code: 'RATE_LIMITED' });
     if (res.status >= 500) {
-      if (attempt < MAX_RETRIES) { await sleep(500 * (attempt + 1)); return graphqlRequest(pat, attempt + 1); }
+      if (attempt < MAX_RETRIES) { await sleep(500 * (attempt + 1)); return graphqlRequest(pat, query, attempt + 1); }
       throw Object.assign(new Error(`GitHub is temporarily unavailable (HTTP ${res.status})`), { code: 'NETWORK_ERROR' });
     }
     if (!res.ok) throw Object.assign(new Error(`HTTP ${res.status}`), { code: 'NETWORK_ERROR' });
-    return res;
-  }
-
-  async function fetchDashboard(pat) {
-    const res = await graphqlRequest(pat);
 
     const json = await res.json();
     if (json.errors?.length) throw Object.assign(new Error(json.errors[0].message), { code: 'GRAPHQL_ERROR' });
+    return json.data;
+  }
 
-    const { viewer, myPRs, reviewRequests, reviewedByMe } = json.data;
+  async function fetchDashboard(pat) {
+    const [my, requested, reviewed] = await Promise.all([
+      graphqlRequest(pat, Q_MY_PRS),
+      graphqlRequest(pat, Q_REVIEW_REQUESTS),
+      graphqlRequest(pat, Q_REVIEWED_BY_ME),
+    ]);
+
+    const login = my.viewer.login;
     return {
-      login: viewer.login,
-      myPRs: myPRs.nodes.filter(n => n?.title && !n.repository?.isArchived),
-      reviewRequestedPRs: reviewRequests.nodes
+      login,
+      myPRs: my.search.nodes.filter(n => n?.title && !n.repository?.isArchived),
+      reviewRequestedPRs: requested.search.nodes
         .filter(n => n?.title && !n.repository?.isArchived)
-        .filter(n => n.reviewRequests?.nodes?.some(r => r.requestedReviewer?.login === viewer.login)),
-      reviewedByMePRs: reviewedByMe.nodes
+        .filter(n => n.reviewRequests?.nodes?.some(r => r.requestedReviewer?.login === login)),
+      reviewedByMePRs: reviewed.search.nodes
         .filter(n => n?.title && !n.repository?.isArchived)
         // Only agent/bot-authored PRs I approved stay (I'm driving them through);
         // human-authored PRs I approved are no longer my responsibility.
         .filter(n => n.author?.__typename === 'Bot')
-        .filter(n => n.reviews?.nodes?.some(r => r.author?.login === viewer.login && r.state === 'APPROVED')),
+        .filter(n => n.reviews?.nodes?.some(r => r.author?.login === login && r.state === 'APPROVED')),
     };
   }
 
