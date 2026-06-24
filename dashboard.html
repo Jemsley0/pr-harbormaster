@@ -43,7 +43,7 @@
     }
     .setup-card h1 { font-size: 20px; margin-bottom: 6px; display: flex; align-items: center; gap: 9px; }
     .setup-card h1 span { color: var(--accent); }
-    .hm-logo { width: 22px; height: 22px; flex-shrink: 0; }
+    .hm-logo { width: 22px; height: 22px; flex-shrink: 0; color: var(--accent); }
     .hm-logo-lg { width: 30px; height: 30px; }
     .setup-card p { color: var(--text-muted); line-height: 1.6; margin-bottom: 16px; font-size: 13px; }
     .setup-card .scopes {
@@ -190,43 +190,14 @@
 </head>
 <body>
 
-  <!-- Harbormaster emblem (referenced by the wordmarks below via <use>) -->
+  <!-- Ship glyph (referenced by the wordmarks below via <use>) -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
-    <symbol id="hm-emblem" viewBox="0 0 64 64">
-      <clipPath id="hm-clip"><circle cx="32" cy="32" r="29"/></clipPath>
-      <circle cx="32" cy="32" r="30" fill="#13284a" stroke="#e3a93a" stroke-width="2.5"/>
-      <g clip-path="url(#hm-clip)">
-        <path d="M7,60 C9,48 20,44 32,44 C44,44 55,48 57,60 L57,64 L7,64 Z" fill="#f0a838" stroke="#cf8a1e" stroke-width="0.8"/>
-        <path d="M26,45 L32,53 L38,45" fill="none" stroke="#cf8a1e" stroke-width="1"/>
-        <path d="M28,39 h8 v6 h-8 Z" fill="#f1c39c"/>
-        <circle cx="21.5" cy="31" r="2.3" fill="#f1c39c"/>
-        <circle cx="42.5" cy="31" r="2.3" fill="#f1c39c"/>
-        <ellipse cx="32" cy="30" rx="10.5" ry="11" fill="#f1c39c"/>
-        <circle cx="24.5" cy="33.5" r="2.6" fill="#ef9a9a" opacity="0.65"/>
-        <circle cx="39.5" cy="33.5" r="2.6" fill="#ef9a9a" opacity="0.65"/>
-        <circle cx="32" cy="31.5" r="1.7" fill="#e8936b"/>
-        <path d="M20.5,27 Q18,39 22,45 Q23.5,47.5 26.5,47 Q27.5,49 29.5,48 Q31,49.5 32,48.8 Q33,49.5 34.5,48 Q36.5,49 37.5,47 Q40.5,47.5 42,45 Q46,39 43.5,27 Q43,35 37.5,37 Q35,38 32,38 Q29,38 26.5,37 Q21,35 20.5,27 Z" fill="#f3f5f8"/>
-        <path d="M25.5,32.5 Q29,35 32,34 Q35,35 38.5,32.5 Q36,37 32,36 Q28,37 25.5,32.5 Z" fill="#f3f5f8"/>
-        <path d="M30,36.3 Q32,38 34,36.3" fill="none" stroke="#b5654d" stroke-width="0.8" stroke-linecap="round"/>
-        <path d="M23.6,24.6 Q27,22.8 30.2,24.6" fill="none" stroke="#eef1f5" stroke-width="1.4" stroke-linecap="round"/>
-        <path d="M33.8,24.6 Q37,22.8 40.4,24.6" fill="none" stroke="#eef1f5" stroke-width="1.4" stroke-linecap="round"/>
-        <line x1="30.9" y1="28.5" x2="33.1" y2="28.5" stroke="#2c2c2c" stroke-width="1"/>
-        <line x1="23.2" y1="28.4" x2="21.4" y2="29.6" stroke="#2c2c2c" stroke-width="1"/>
-        <line x1="40.8" y1="28.4" x2="42.6" y2="29.6" stroke="#2c2c2c" stroke-width="1"/>
-        <circle cx="27" cy="28.5" r="3.9" fill="#ffffff" fill-opacity="0.22" stroke="#2c2c2c" stroke-width="1"/>
-        <circle cx="37" cy="28.5" r="3.9" fill="#ffffff" fill-opacity="0.22" stroke="#2c2c2c" stroke-width="1"/>
-        <circle cx="27.3" cy="28.7" r="1.7" fill="#2b3a4a"/>
-        <circle cx="37.3" cy="28.7" r="1.7" fill="#2b3a4a"/>
-        <circle cx="26.7" cy="28.1" r="0.55" fill="#ffffff"/>
-        <circle cx="36.7" cy="28.1" r="0.55" fill="#ffffff"/>
-        <path d="M16,19.5 Q32,24.5 48,19.5 Q48,21.8 32,24.2 Q16,21.8 16,19.5 Z" fill="#16223a"/>
-        <path d="M16.5,17.5 Q32,12.8 47.5,17.5 L47.5,21 Q32,16.6 16.5,21 Z" fill="#1c3a5e"/>
-        <path d="M16,18.2 Q15,5 32,5 Q50,5 48,18.2 Q40,12.8 32,12.8 Q23,13.2 16,18.2 Z" fill="#f4f6f8"/>
-        <circle cx="32" cy="8.4" r="1.1" fill="none" stroke="#16223a" stroke-width="0.9"/>
-        <line x1="32" y1="9.4" x2="32" y2="13.8" stroke="#16223a" stroke-width="0.9" stroke-linecap="round"/>
-        <line x1="29.7" y1="10.7" x2="34.3" y2="10.7" stroke="#16223a" stroke-width="0.9" stroke-linecap="round"/>
-        <path d="M29.2,12.6 Q29.6,14.8 32,14.8 Q34.4,14.8 34.8,12.6" fill="none" stroke="#16223a" stroke-width="0.9" stroke-linecap="round"/>
-      </g>
+    <symbol id="hm-emblem" viewBox="0 0 24 24">
+      <rect x="11.4" y="2.2" width="1.2" height="2.6" fill="currentColor"/>
+      <rect x="8.8" y="4.4" width="6.4" height="2.2" rx="0.4" fill="currentColor"/>
+      <path fill="currentColor" fill-rule="evenodd" d="M4.5,8 H19.5 L16.3,13.8 L12,17.2 L7.7,13.8 Z M10.95,10.6 a1.05,1.05 0 1,0 2.1,0 a1.05,1.05 0 1,0 -2.1,0 Z"/>
+      <path d="M3,19.6 q2,-1.6 4,0 t4,0 t4,0 t4,0" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+      <path d="M5,22 q2,-1.6 4,0 t4,0 t4,0" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
     </symbol>
   </svg>
 
