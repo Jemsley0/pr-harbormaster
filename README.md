@@ -41,7 +41,7 @@ That's it. The dashboard refreshes every 5 minutes automatically.
 | 💤 Stale | Your PRs (draft or submitted) with no activity for 14+ days |
 | 🔨 In Progress | Your active draft PRs |
 | 🔍 Reviews | Your PRs waiting on reviewers (top) + PRs assigned to you (bottom) |
-| 🚀 Ready to Deploy | Your approved PRs with no outstanding change requests |
+| 🚢 Ready to Ship | Your approved PRs with no outstanding change requests |
 
 ## Resetting your token
 

@@ -193,11 +193,19 @@
   <!-- Freight ship glyph (referenced by the wordmarks below via <use>) -->
   <svg width="0" height="0" style="position:absolute" aria-hidden="true">
     <symbol id="hm-emblem" viewBox="0 0 24 24">
-      <rect x="4.2" y="7.3" width="1.5" height="2" fill="currentColor"/>
-      <rect x="3.4" y="9" width="3" height="5" fill="currentColor"/>
-      <rect x="8.5" y="8.7" width="8" height="2.3" fill="currentColor"/>
-      <rect x="7" y="11" width="11" height="3" fill="currentColor"/>
-      <path d="M2.5,14 H21.5 L18.5,18.8 Q11.5,20.3 5,18.8 Z" fill="currentColor"/>
+      <g fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round">
+        <line x1="5.5" y1="3.8" x2="5.5" y2="8"/>
+        <path d="M5.5,4 H8 V6 H5.5"/>
+        <rect x="3.5" y="8" width="4" height="3" rx="0.5"/>
+        <rect x="2" y="11" width="6" height="4" rx="0.5"/>
+        <line x1="2.6" y1="12.9" x2="7.4" y2="12.9"/>
+        <rect x="9" y="8.5" width="8" height="6.5" rx="0.5"/>
+        <line x1="13" y1="8.5" x2="13" y2="15"/>
+        <line x1="9" y1="11.75" x2="17" y2="11.75"/>
+        <rect x="17" y="12" width="4" height="3" rx="0.5"/>
+        <path d="M2,15 H20 Q23.2,15 23.2,11.8 Q23.5,16 20.5,18.5 H5.5 Q3,18.5 2,16.2 Z"/>
+        <line x1="5.5" y1="17" x2="19" y2="17"/>
+      </g>
     </symbol>
   </svg>
 
@@ -268,7 +276,7 @@
       <div class="db-col db-col-deploy">
         <div class="db-col-header">
           <div class="db-col-title">
-            🚀 Ready to Deploy <span id="count-ready" class="db-count">0</span>
+            🚢 Ready to Ship <span id="count-ready" class="db-count">0</span>
           </div>
         </div>
         <div id="cards-ready" class="db-cards"></div>
@@ -560,7 +568,7 @@
 
     document.getElementById('cards-ready').innerHTML =
       ready.length ? ready.map(pr => renderCard(pr, 'ready')).join('') :
-      '<div class="db-empty">Merge it! 🎉</div>';
+      '<div class="db-empty">Ship it! 🚢</div>';
 
     document.getElementById('count-stale').textContent      = stale.length;
     document.getElementById('count-inprogress').textContent = inProgress.length;
