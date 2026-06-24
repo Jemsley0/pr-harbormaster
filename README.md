@@ -2,16 +2,32 @@
 
 A single local HTML file that shows all your GitHub PRs in four action-oriented columns.
 
+It runs entirely in your own browser. There are no shared secrets and no server: each
+person authenticates with their own GitHub token, which is stored only in their own
+browser and is sent only to `api.github.com`. Sharing the file with a teammate is safe.
+
 ## Setup
 
-1. **Create a Personal Access Token** at https://github.com/settings/tokens
-   - Select **Classic token**
-   - Required scopes: `repo` and `read:user`
-   - Set an expiration date (90 days recommended)
+1. **Create a token** at https://github.com/settings/personal-access-tokens/new
+
+   Use a **fine-grained token** with read-only access (preferred — it limits the blast
+   radius if the token ever leaks):
+   - **Resource owner:** the org whose PRs you want to see (e.g. `upside-services`)
+   - **Repository access:** all repositories (or just the ones you care about)
+   - **Repository permissions** (all **Read-only**):
+     - Metadata
+     - Pull requests
+     - Commit statuses
+     - Checks
+   - **Expiration:** 90 days
+
+   > If your org hasn't enabled fine-grained tokens, you can fall back to a **Classic
+   > token** with the `repo` and `read:user` scopes — but note `repo` grants full
+   > read/write to all your private repos, so prefer the fine-grained option.
 
 2. **Open `dashboard.html`** in your browser — just double-click it or run:
    ```
-   open ~/github-pr-dashboard/dashboard.html
+   open dashboard.html
    ```
 
 3. **Paste your token** into the setup screen and click Save.
