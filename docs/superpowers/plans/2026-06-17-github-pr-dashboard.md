@@ -43,7 +43,7 @@ Everything lives in `dashboard.html`. The script section is organized into these
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>PRflow</title>
+  <title>PR Harbormaster</title>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -852,7 +852,7 @@ git commit -m "feat: wire up fetch/render/auto-refresh — full end-to-end dashb
 - [ ] **Step 1: Create README.md**
 
 ```markdown
-# PRflow — GitHub PR Dashboard
+# PR Harbormaster — GitHub PR Dashboard
 
 A single local HTML file that shows all your GitHub PRs in four action-oriented columns.
 

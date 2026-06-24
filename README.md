@@ -1,4 +1,4 @@
-# PRflow — GitHub PR Dashboard
+# PR Harbormaster — GitHub PR Dashboard
 
 A single local HTML file that shows all your GitHub PRs in four action-oriented columns.
 
