@@ -162,12 +162,14 @@
     .tag-red    { background: rgba(248,81,73,.15);  color: var(--red); }
     .tag-yellow { background: rgba(210,153,34,.15); color: var(--yellow); }
     .tag-gray   { background: var(--surface-3);     color: var(--text-muted); }
+    .tag-amber  { background: rgba(245,158,11,.15); color: var(--amber); font-weight: 600; }
     .badge-stale  { background: rgba(245,158,11,.2);  color: var(--amber); font-weight: 600; }
     .badge-draft  { background: var(--surface-3);     color: var(--text-muted); font-weight: 600; }
     .badge-me     { background: rgba(163,113,247,.15); color: var(--purple); font-weight: 600; }
     .badge-them   { background: rgba(245,158,11,.12); color: var(--amber-dark); font-weight: 600; }
     .badge-deploy    { background: rgba(63,185,80,.2);   color: var(--green); font-weight: 600; }
     .badge-approved  { background: rgba(20,184,166,.15); color: #14b8a6;      font-weight: 600; }
+    .badge-changes   { background: rgba(248,81,73,.15);  color: var(--red);    font-weight: 600; }
 
     /* ── Reviews column sections ── */
     .reviews-divider {
@@ -338,6 +340,7 @@
           title number url updatedAt isDraft reviewDecision
           comments { totalCount }
           reviews(last: 20) { nodes { state } }
+          reviewThreads(first: 50) { nodes { isResolved } }
           reviewRequests { totalCount }
           repository { nameWithOwner isArchived }
           headRef { target { ... on Commit { statusCheckRollup { state } } } }
@@ -347,9 +350,10 @@
     query {
       search(query: "is:open is:pr review-requested:@me", type: ISSUE, first: 50) {
         nodes { ... on PullRequest {
-          title number url updatedAt
+          title number url updatedAt reviewDecision
           author { login }
           comments { totalCount }
+          reviewThreads(first: 50) { nodes { isResolved } }
           repository { nameWithOwner isArchived }
           headRef { target { ... on Commit { statusCheckRollup { state } } } }
           reviewRequests(first: 10) { nodes { requestedReviewer { ... on User { login } } } }
@@ -363,6 +367,7 @@
           author { __typename login }
           comments { totalCount }
           reviews(last: 20) { nodes { state author { login } } }
+          reviewThreads(first: 50) { nodes { isResolved } }
           reviewRequests { totalCount }
           repository { nameWithOwner isArchived }
           headRef { target { ... on Commit { statusCheckRollup { state } } } }
@@ -505,6 +510,8 @@
     const repo = escapeHtml(pr.repository.nameWithOwner.split('/').pop());
     const age  = relativeTime(pr.updatedAt);
     const comments = pr.comments.totalCount;
+    const unresolved = (pr.reviewThreads?.nodes ?? []).filter(t => !t.isResolved).length;
+    const changesRequested = pr.reviewDecision === 'CHANGES_REQUESTED';
 
     let badges = '';
     if (variant === 'stale') {
@@ -523,9 +530,17 @@
       badges += '<span class="badge badge-deploy">✓ approved</span>';
     }
 
+    if (changesRequested) {
+      badges += '<span class="badge badge-changes">⚠ changes requested</span>';
+    }
+
     if (variant === 'reviewsTop' && pr.reviewRequests?.totalCount > 0) {
       badges += `<span class="tag tag-gray">👤 ${pr.reviewRequests.totalCount}</span>`;
     }
+
+    const commentTag = unresolved > 0
+      ? `<span class="tag tag-amber">💬 ${unresolved} unresolved</span>`
+      : `<span class="tag tag-gray">💬 ${comments}</span>`;
 
     const cardClass = variant === 'stale'  ? 'db-card db-card-stale'  :
                       variant === 'ready'  ? 'db-card db-card-deploy' : 'db-card';
@@ -533,7 +548,7 @@
     return `<a class="${cardClass}" href="${escapeHtml(pr.url)}" target="_blank" rel="noopener noreferrer">
       <div class="db-card-title">${escapeHtml(pr.title)}</div>
       <div class="db-card-meta">${repo} · #${pr.number} · ${age}</div>
-      <div class="db-card-tags">${badges}${ciTag(pr)}<span class="tag tag-gray">💬 ${comments}</span></div>
+      <div class="db-card-tags">${badges}${ciTag(pr)}${commentTag}</div>
     </a>`;
   }
 
