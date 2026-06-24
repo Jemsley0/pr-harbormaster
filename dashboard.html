@@ -221,10 +221,12 @@
       <h1><svg class="hm-logo hm-logo-lg" viewBox="0 0 64 64" aria-hidden="true"><use href="#hm-emblem"/></svg>PR <span>Harbormaster</span></h1>
       <p>Enter a GitHub Personal Access Token to load your pull requests. The token is stored locally in your browser and never leaves your machine.</p>
       <div class="scopes">
-        Required scopes: <code>repo</code> and <code>read:user</code>
+        Recommended: a <strong>fine-grained token</strong> with <strong>read-only</strong> access to
+        <code>Pull requests</code>, <code>Commit statuses</code>, <code>Checks</code> &amp; <code>Metadata</code>.
+        A classic token with <code>repo</code> + <code>read:user</code> also works.
       </div>
       <input id="pat-input" class="setup-input" type="password"
-             placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" autocomplete="off" />
+             placeholder="github_pat_… or ghp_…" autocomplete="off" />
       <button class="setup-btn" onclick="saveAndInit()">Save token</button>
       <div id="setup-error" class="setup-error"></div>
     </div>

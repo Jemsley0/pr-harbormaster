@@ -1,0 +1,98 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1080" height="380" viewBox="0 0 1080 380" role="img" font-family="-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif">
+<title>PR Harbormaster dashboard</title>
+<desc>The dashboard with four columns — Stale, In Progress, Reviews, and Ready to Ship — showing example pull request cards. Illustration with sample data.</desc>
+<rect x="0.5" y="0.5" width="1079" height="379" rx="10" fill="#0d1117" stroke="#30363d"/>
+
+<!-- Header -->
+<rect x="1" y="1" width="1078" height="47" rx="10" fill="#161b22"/>
+<rect x="1" y="20" width="1078" height="28" fill="#161b22"/>
+<line x1="1" y1="48" x2="1079" y2="48" stroke="#30363d"/>
+<g transform="translate(16,13) scale(0.85)" fill="none" stroke="#58a6ff" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+  <line x1="5.5" y1="3.8" x2="5.5" y2="8"/>
+  <path d="M5.5,4 H8 V6 H5.5"/>
+  <rect x="3.5" y="8" width="4" height="3" rx="0.5"/>
+  <rect x="2" y="11" width="6" height="4" rx="0.5"/>
+  <line x1="2.6" y1="12.9" x2="7.4" y2="12.9"/>
+  <rect x="9" y="8.5" width="8" height="6.5" rx="0.5"/>
+  <line x1="13" y1="8.5" x2="13" y2="15"/>
+  <line x1="9" y1="11.75" x2="17" y2="11.75"/>
+  <path d="M2,15 H20 Q23.2,15 23.2,11.8 Q23.5,16 20.5,18.5 H5.5 Q3,18.5 2,16.2 Z"/>
+  <line x1="5.5" y1="17" x2="19" y2="17"/>
+</g>
+<text x="46" y="30" font-size="15" font-weight="700" fill="#e6edf3">PR <tspan fill="#58a6ff">Harbormaster</tspan></text>
+<rect x="178" y="14" width="74" height="20" rx="10" fill="#30363d"/>
+<text x="215" y="28" font-size="11" fill="#7d8590" text-anchor="middle">@octocat</text>
+<text x="872" y="29" font-size="11" fill="#7d8590" text-anchor="end">Updated just now</text>
+<rect x="884" y="12" width="74" height="24" rx="6" fill="#21262d" stroke="#30363d"/>
+<text x="921" y="28" font-size="11" fill="#e6edf3" text-anchor="middle">Refresh</text>
+<rect x="966" y="12" width="98" height="24" rx="6" fill="#21262d" stroke="#30363d"/>
+<text x="1015" y="28" font-size="11" fill="#e6edf3" text-anchor="middle">Reset token</text>
+
+<!-- Column separators -->
+<line x1="270" y1="49" x2="270" y2="379" stroke="#30363d"/>
+<line x1="540" y1="49" x2="540" y2="379" stroke="#30363d"/>
+<line x1="810" y1="49" x2="810" y2="379" stroke="#30363d"/>
+
+<!-- Column headers -->
+<text x="14" y="76" font-size="11" font-weight="700" letter-spacing="0.5" fill="#f59e0b">STALE</text>
+<rect x="236" y="64" width="22" height="16" rx="8" fill="#30363d"/><text x="247" y="76" font-size="10" fill="#7d8590" text-anchor="middle">2</text>
+<text x="284" y="76" font-size="11" font-weight="700" letter-spacing="0.5" fill="#7d8590">IN PROGRESS</text>
+<rect x="506" y="64" width="22" height="16" rx="8" fill="#30363d"/><text x="517" y="76" font-size="10" fill="#7d8590" text-anchor="middle">2</text>
+<text x="554" y="76" font-size="11" font-weight="700" letter-spacing="0.5" fill="#58a6ff">REVIEWS</text>
+<rect x="776" y="64" width="22" height="16" rx="8" fill="#30363d"/><text x="787" y="76" font-size="10" fill="#7d8590" text-anchor="middle">2</text>
+<text x="824" y="76" font-size="11" font-weight="700" letter-spacing="0.5" fill="#3fb950">READY TO SHIP</text>
+<rect x="1046" y="64" width="22" height="16" rx="8" fill="#30363d"/><text x="1057" y="76" font-size="10" fill="#7d8590" text-anchor="middle">1</text>
+<line x1="0" y1="90" x2="1080" y2="90" stroke="#21262d"/>
+
+<!-- Col 1: Stale -->
+<rect x="12" y="102" width="246" height="86" rx="7" fill="#161b22" stroke="#3a2f12"/>
+<text x="24" y="126" font-size="13" font-weight="600" fill="#e6edf3">Add retry logic to webhooks</text>
+<text x="24" y="146" font-size="11" fill="#7d8590">octocat/webhooks · #128 · 16d ago</text>
+<rect x="24" y="160" width="54" height="16" rx="8" fill="#2a2410"/><text x="51" y="171" font-size="10" fill="#f59e0b" text-anchor="middle">16d idle</text>
+<rect x="84" y="160" width="38" height="16" rx="8" fill="#21262d"/><text x="103" y="171" font-size="10" fill="#7d8590" text-anchor="middle">draft</text>
+<rect x="128" y="160" width="66" height="16" rx="8" fill="#122a18"/><text x="161" y="171" font-size="10" fill="#3fb950" text-anchor="middle">CI passing</text>
+
+<rect x="12" y="198" width="246" height="78" rx="7" fill="#161b22" stroke="#3a2f12"/>
+<text x="24" y="222" font-size="13" font-weight="600" fill="#e6edf3">Document the config schema</text>
+<text x="24" y="242" font-size="11" fill="#7d8590">octocat/docs · #74 · 21d ago</text>
+<rect x="24" y="256" width="54" height="16" rx="8" fill="#2a2410"/><text x="51" y="267" font-size="10" fill="#f59e0b" text-anchor="middle">21d idle</text>
+<rect x="84" y="256" width="66" height="16" rx="8" fill="#122a18"/><text x="117" y="267" font-size="10" fill="#3fb950" text-anchor="middle">CI passing</text>
+
+<!-- Col 2: In Progress -->
+<rect x="282" y="102" width="246" height="78" rx="7" fill="#161b22" stroke="#30363d"/>
+<text x="294" y="126" font-size="13" font-weight="600" fill="#e6edf3">Refactor auth middleware</text>
+<text x="294" y="146" font-size="11" fill="#7d8590">octocat/api · #210 · 2h ago</text>
+<rect x="294" y="160" width="38" height="16" rx="8" fill="#21262d"/><text x="313" y="171" font-size="10" fill="#7d8590" text-anchor="middle">draft</text>
+<rect x="338" y="160" width="66" height="16" rx="8" fill="#2a2410"/><text x="371" y="171" font-size="10" fill="#f59e0b" text-anchor="middle">CI running</text>
+
+<rect x="282" y="190" width="246" height="78" rx="7" fill="#161b22" stroke="#30363d"/>
+<text x="294" y="214" font-size="13" font-weight="600" fill="#e6edf3">Add pagination to results</text>
+<text x="294" y="234" font-size="11" fill="#7d8590">octocat/web · #205 · 6h ago</text>
+<rect x="294" y="248" width="38" height="16" rx="8" fill="#21262d"/><text x="313" y="259" font-size="10" fill="#7d8590" text-anchor="middle">draft</text>
+<rect x="338" y="248" width="66" height="16" rx="8" fill="#122a18"/><text x="371" y="259" font-size="10" fill="#3fb950" text-anchor="middle">CI passing</text>
+
+<!-- Col 3: Reviews -->
+<text x="552" y="108" font-size="9" font-weight="700" letter-spacing="0.6" fill="#7d8590">MY PRS AWAITING REVIEW</text>
+<line x1="552" y1="114" x2="798" y2="114" stroke="#21262d"/>
+<rect x="552" y="122" width="246" height="84" rx="7" fill="#161b22" stroke="#30363d"/>
+<text x="564" y="146" font-size="13" font-weight="600" fill="#e6edf3">Add dark-mode toggle</text>
+<text x="564" y="166" font-size="11" fill="#7d8590">octocat/web · #57 · 4h ago</text>
+<rect x="564" y="180" width="92" height="16" rx="8" fill="#241a33"/><text x="610" y="191" font-size="10" fill="#a371f7" text-anchor="middle">authored by me</text>
+<rect x="662" y="180" width="66" height="16" rx="8" fill="#122a18"/><text x="695" y="191" font-size="10" fill="#3fb950" text-anchor="middle">CI passing</text>
+
+<text x="552" y="230" font-size="9" font-weight="700" letter-spacing="0.6" fill="#7d8590">PRS I NEED TO REVIEW</text>
+<line x1="552" y1="236" x2="798" y2="236" stroke="#21262d"/>
+<rect x="552" y="244" width="246" height="78" rx="7" fill="#161b22" stroke="#30363d"/>
+<text x="564" y="268" font-size="13" font-weight="600" fill="#e6edf3">Update CONTRIBUTING guide</text>
+<text x="564" y="288" font-size="11" fill="#7d8590">octocat/docs · #91 · 1d ago</text>
+<rect x="564" y="302" width="58" height="16" rx="8" fill="#2a2410"/><text x="593" y="313" font-size="10" fill="#f59e0b" text-anchor="middle">by mona</text>
+<rect x="628" y="302" width="66" height="16" rx="8" fill="#122a18"/><text x="661" y="313" font-size="10" fill="#3fb950" text-anchor="middle">CI passing</text>
+
+<!-- Col 4: Ready to Ship -->
+<rect x="822" y="102" width="246" height="84" rx="7" fill="#161b22" stroke="#18331f"/>
+<text x="834" y="126" font-size="13" font-weight="600" fill="#e6edf3">Bump dependencies to latest</text>
+<text x="834" y="146" font-size="11" fill="#7d8590">octocat/api · #60 · 3h ago</text>
+<rect x="834" y="160" width="64" height="16" rx="8" fill="#122a18"/><text x="866" y="171" font-size="10" fill="#3fb950" text-anchor="middle">approved</text>
+<rect x="904" y="160" width="66" height="16" rx="8" fill="#122a18"/><text x="937" y="171" font-size="10" fill="#3fb950" text-anchor="middle">CI passing</text>
+<text x="945" y="240" font-size="11" fill="#56606b" text-anchor="middle">Ship it!</text>
+</svg>

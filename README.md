@@ -2,6 +2,10 @@
 
 A single local HTML file that shows all your GitHub PRs in four action-oriented columns.
 
+![PR Harbormaster dashboard](docs/preview.svg)
+
+> *Illustration with sample data. Your real board pulls live from the GitHub API.*
+
 It runs entirely in your own browser. There are no shared secrets and no server: each
 person authenticates with their own GitHub token, which is stored only in their own
 browser and is sent only to `api.github.com`. Sharing the file with a teammate is safe.
