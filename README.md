@@ -12,7 +12,7 @@ browser and is sent only to `api.github.com`. Sharing the file with a teammate i
 
    Use a **fine-grained token** with read-only access (preferred — it limits the blast
    radius if the token ever leaks):
-   - **Resource owner:** the org whose PRs you want to see (e.g. `upside-services`)
+   - **Resource owner:** the org or account whose PRs you want to see
    - **Repository access:** all repositories (or just the ones you care about)
    - **Repository permissions** (all **Read-only**):
      - Metadata

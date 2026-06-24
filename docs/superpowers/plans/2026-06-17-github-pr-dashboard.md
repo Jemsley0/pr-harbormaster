@@ -732,7 +732,7 @@ const mockPR = {
   comments: { totalCount: 0 },
   reviewRequests: { totalCount: 0 },
   reviews: { nodes: [] },
-  repository: { nameWithOwner: 'org/hex-infrastructure' },
+  repository: { nameWithOwner: 'octocat/hello-world' },
   headRef: null,
 };
 console.log(renderCard(mockPR, 'inProgress'));
