@@ -88,6 +88,27 @@
     }
     .db-btn:hover { border-color: var(--accent); color: var(--accent); }
 
+    .db-filter { display: inline-flex; align-items: center; gap: 6px; }
+    .db-filter-label { font-size: 10px; color: var(--text-muted); text-transform: uppercase; letter-spacing: .4px; }
+    .db-filter-group {
+      display: inline-flex; border: 1px solid var(--border); border-radius: 6px; overflow: hidden;
+    }
+    .db-filter-group button {
+      font-size: 11px; background: var(--surface-2); border: none;
+      border-right: 1px solid var(--border); padding: 4px 9px; cursor: pointer; color: var(--text-muted);
+    }
+    .db-filter-group button:last-child { border-right: none; }
+    .db-filter-group button:hover { color: var(--accent); }
+    .db-filter-group button.active { background: var(--accent); color: var(--bg); font-weight: 600; }
+
+    /* ── Loading screen ── */
+    .loading-screen {
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      gap: 12px; min-height: 100vh; color: var(--text-muted); font-size: 13px;
+    }
+    .loading-screen .hm-logo-lg { opacity: .7; animation: hm-pulse 1.4s ease-in-out infinite; }
+    @keyframes hm-pulse { 0%, 100% { opacity: .35; } 50% { opacity: .85; } }
+
     /* ── Error banner ── */
     .error-banner {
       background: rgba(248, 81, 73, .1); border-bottom: 1px solid rgba(248,81,73,.3);
@@ -170,6 +191,7 @@
     .badge-deploy    { background: rgba(63,185,80,.2);   color: var(--green); font-weight: 600; }
     .badge-approved  { background: rgba(20,184,166,.15); color: #14b8a6;      font-weight: 600; }
     .badge-changes   { background: rgba(248,81,73,.15);  color: var(--red);    font-weight: 600; }
+    .badge-conflict  { background: rgba(248,81,73,.15);  color: var(--red);    font-weight: 600; }
 
     /* ── Reviews column sections ── */
     .reviews-divider {
@@ -212,6 +234,12 @@
     <button class="retry-btn" onclick="manualRefresh()">Retry</button>
   </div>
 
+  <!-- Loading screen (shown during the first fetch) -->
+  <div id="loading-screen" class="loading-screen hidden">
+    <svg class="hm-logo hm-logo-lg" viewBox="0 0 64 64" aria-hidden="true"><use href="#hm-emblem"/></svg>
+    Loading your PRs…
+  </div>
+
   <!-- Setup screen -->
   <div id="setup-screen" class="setup-screen hidden">
     <div class="setup-card">
@@ -237,6 +265,14 @@
         <div id="db-user" class="db-user"></div>
       </div>
       <div class="db-header-right">
+        <div class="db-filter">
+          <span class="db-filter-label">Reviews</span>
+          <div id="filter-group" class="db-filter-group">
+            <button data-filter="you"  onclick="setFilter('you')">You</button>
+            <button data-filter="team" onclick="setFilter('team')">Team</button>
+            <button data-filter="all"  onclick="setFilter('all')">All</button>
+          </div>
+        </div>
         <span id="db-updated" class="db-updated"></span>
         <button class="db-btn" onclick="manualRefresh()">⟳ Refresh</button>
         <button class="db-btn" onclick="resetToken()">Reset token</button>
@@ -286,6 +322,7 @@
   <script>
   // ── Constants ──────────────────────────────────────────────────────────
   const PAT_KEY = 'gh_prd_pat';
+  const FILTER_KEY = 'gh_prd_review_filter';   // 'you' | 'team' | 'all'
   const STALE_DAYS = 14;
   const REFRESH_MS = 5 * 60 * 1000;
 
@@ -295,7 +332,14 @@
   function clearPAT()      { localStorage.removeItem(PAT_KEY); }
 
   // ── UI state ───────────────────────────────────────────────────────────
+  function showLoading() {
+    document.getElementById('loading-screen').classList.remove('hidden');
+    document.getElementById('setup-screen').classList.add('hidden');
+    document.getElementById('dashboard').classList.add('hidden');
+  }
+
   function showSetup(errorMsg = '') {
+    document.getElementById('loading-screen').classList.add('hidden');
     document.getElementById('setup-screen').classList.remove('hidden');
     document.getElementById('dashboard').classList.add('hidden');
     document.getElementById('setup-error').textContent = errorMsg;
@@ -304,12 +348,14 @@
   }
 
   function showDashboard(username) {
+    document.getElementById('loading-screen').classList.add('hidden');
     document.getElementById('setup-screen').classList.add('hidden');
     document.getElementById('dashboard').classList.remove('hidden');
     document.getElementById('db-user').textContent = `@${username}`;
   }
 
   function showError(msg) {
+    document.getElementById('loading-screen').classList.add('hidden');
     const banner = document.getElementById('error-banner');
     document.getElementById('error-msg').textContent = msg;
     banner.classList.remove('hidden');
@@ -332,7 +378,7 @@
     query { viewer { login }
       search(query: "is:open is:pr author:@me", type: ISSUE, first: 50) {
         nodes { ... on PullRequest {
-          title number url updatedAt isDraft reviewDecision
+          title number url updatedAt isDraft reviewDecision mergeable
           comments { totalCount }
           reviews(last: 20) { nodes { state } }
           reviewThreads(first: 50) { nodes { isResolved } }
@@ -341,24 +387,30 @@
           headRef { target { ... on Commit { statusCheckRollup { state } } } }
         } } } }`;
 
-  const Q_REVIEW_REQUESTS = `
+  // Review-requested searches are built per-filter (see fetchDashboard): the
+  // search string scopes them to me (review-requested:@me) and/or my teams
+  // (team-review-requested:org/team), since GitHub treats those separately.
+  const Q_REVIEW_REQUESTS = searchQuery => `
     query {
-      search(query: "is:open is:pr review-requested:@me", type: ISSUE, first: 50) {
+      search(query: ${JSON.stringify(searchQuery)}, type: ISSUE, first: 50) {
         nodes { ... on PullRequest {
-          title number url updatedAt reviewDecision
+          title number url updatedAt reviewDecision mergeable
           author { login }
           comments { totalCount }
           reviewThreads(first: 50) { nodes { isResolved } }
           repository { nameWithOwner isArchived }
           headRef { target { ... on Commit { statusCheckRollup { state } } } }
-          reviewRequests(first: 10) { nodes { requestedReviewer { ... on User { login } } } }
+          reviewRequests(first: 10) { nodes { requestedReviewer {
+            ... on User { login }
+            ... on Team { combinedSlug }
+          } } }
         } } } }`;
 
   const Q_REVIEWED_BY_ME = `
     query {
       search(query: "is:open is:pr reviewed-by:@me -author:@me", type: ISSUE, first: 50) {
         nodes { ... on PullRequest {
-          title number url updatedAt reviewDecision
+          title number url updatedAt reviewDecision mergeable
           author { __typename login }
           comments { totalCount }
           reviews(last: 20) { nodes { state author { login } } }
@@ -367,6 +419,14 @@
           repository { nameWithOwner isArchived }
           headRef { target { ... on Commit { statusCheckRollup { state } } } }
         } } } }`;
+
+  // Teams the viewer belongs to, across their orgs — needed to build
+  // team-review-requested searches. review-requested:@me only matches PRs
+  // where you're requested individually, not via a team.
+  const Q_VIEWER_TEAMS = login => `
+    query { viewer { organizations(first: 20) { nodes {
+      teams(first: 50, userLogins: ${JSON.stringify([login])}) { nodes { combinedSlug } }
+    } } } }`;
 
   const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -402,20 +462,63 @@
     return json.data;
   }
 
-  async function fetchDashboard(pat) {
-    const [my, requested, reviewed] = await Promise.all([
+  // Teams are stable within a session — discover once and reuse.
+  let cachedTeams = null;
+  async function getMyTeams(pat, login) {
+    if (cachedTeams) return cachedTeams;
+    const data = await graphqlRequest(pat, Q_VIEWER_TEAMS(login));
+    const slugs = new Set();
+    for (const org of data.viewer.organizations?.nodes ?? []) {
+      for (const team of org.teams?.nodes ?? []) {
+        if (team.combinedSlug) slugs.add(team.combinedSlug);
+      }
+    }
+    cachedTeams = [...slugs];
+    return cachedTeams;
+  }
+
+  async function fetchDashboard(pat, filter) {
+    const [my, reviewed] = await Promise.all([
       graphqlRequest(pat, Q_MY_PRS),
-      graphqlRequest(pat, Q_REVIEW_REQUESTS),
       graphqlRequest(pat, Q_REVIEWED_BY_ME),
     ]);
-
     const login = my.viewer.login;
+
+    // Build the review-request searches that match the active filter.
+    const searches = [];
+    if (filter === 'you' || filter === 'all') {
+      searches.push('is:open is:pr review-requested:@me');
+    }
+    let teams = [];
+    if (filter === 'team' || filter === 'all') {
+      teams = await getMyTeams(pat, login);
+      for (const slug of teams) searches.push(`is:open is:pr team-review-requested:${slug}`);
+    }
+
+    const requestedNodes = (await Promise.all(
+      searches.map(q => graphqlRequest(pat, Q_REVIEW_REQUESTS(q)))
+    )).flatMap(r => r.search.nodes);
+
+    // Keep a PR only if an outstanding request still points at me or one of my
+    // teams (search can lag a request that was dismissed), then dedupe — a PR
+    // can surface from both my own request and a team's under the "All" filter.
+    const myIds = new Set([login, ...teams]);
+    const requestedSeen = new Set();
+    const reviewRequestedPRs = requestedNodes
+      .filter(n => n?.title && !n.repository?.isArchived)
+      .filter(n => n.reviewRequests?.nodes?.some(r =>
+        myIds.has(r.requestedReviewer?.login) || myIds.has(r.requestedReviewer?.combinedSlug)))
+      .filter(n => {
+        const key = `${n.number}/${n.repository.nameWithOwner}`;
+        if (requestedSeen.has(key)) return false;
+        requestedSeen.add(key);
+        return true;
+      });
+
     return {
       login,
       myPRs: my.search.nodes.filter(n => n?.title && !n.repository?.isArchived),
-      reviewRequestedPRs: requested.search.nodes
-        .filter(n => n?.title && !n.repository?.isArchived)
-        .filter(n => n.reviewRequests?.nodes?.some(r => r.requestedReviewer?.login === login)),
+      reviewRequestedPRs,
       reviewedByMePRs: reviewed.search.nodes
         .filter(n => n?.title && !n.repository?.isArchived)
         // Only agent/bot-authored PRs I approved stay (I'm driving them through);
@@ -529,6 +632,14 @@
       badges += '<span class="badge badge-changes">⚠ changes requested</span>';
     }
 
+    // GitHub computes mergeability asynchronously, so badge only a definitive
+    // CONFLICTING (not UNKNOWN). Shown where a merge is the next action: PRs
+    // ready to ship and PRs in the review columns.
+    if (pr.mergeable === 'CONFLICTING' &&
+        (variant === 'ready' || variant === 'reviewsTop' || variant === 'reviewsBottom')) {
+      badges += '<span class="badge badge-conflict">⚠ merge conflicts</span>';
+    }
+
     if (variant === 'reviewsTop' && pr.reviewRequests?.totalCount > 0) {
       badges += `<span class="tag tag-gray">👤 ${pr.reviewRequests.totalCount}</span>`;
     }
@@ -588,6 +699,26 @@
     document.getElementById('count-ready').textContent      = ready.length;
   }
 
+  // ── Review filter (You / Team / All) ───────────────────────────────────
+  function getFilter() {
+    const f = localStorage.getItem(FILTER_KEY);
+    return (f === 'team' || f === 'all') ? f : 'you';
+  }
+
+  function syncFilterButtons() {
+    const active = getFilter();
+    document.querySelectorAll('#filter-group button').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.filter === active);
+    });
+  }
+
+  function setFilter(f) {
+    if (getFilter() === f) return;
+    localStorage.setItem(FILTER_KEY, f);
+    syncFilterButtons();
+    manualRefresh();
+  }
+
   // ── PAT setup handlers ─────────────────────────────────────────────────
   function saveAndInit() {
     const token = document.getElementById('pat-input').value.trim();
@@ -612,7 +743,7 @@
 
     try {
       hideError();
-      const { login, myPRs, reviewRequestedPRs, reviewedByMePRs } = await fetchDashboard(pat);
+      const { login, myPRs, reviewRequestedPRs, reviewedByMePRs } = await fetchDashboard(pat, getFilter());
       const columns = processData(myPRs, reviewRequestedPRs, reviewedByMePRs);
       render(columns, login);
       updateTimestamp();
@@ -648,8 +779,10 @@
   // ── Init ───────────────────────────────────────────────────────────────
   async function init() {
     if (refreshTimer) clearInterval(refreshTimer);
+    syncFilterButtons();
     const pat = getPAT();
     if (!pat) { showSetup(); return; }
+    showLoading();
     await refresh();
     refreshTimer = setInterval(refresh, REFRESH_MS);
   }
