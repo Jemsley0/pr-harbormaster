@@ -406,11 +406,16 @@
           } } }
         } } } }`;
 
-  const Q_REVIEWED_BY_ME = `
+  // PRs an agent (e.g. Copilot) opened on my behalf: when you delegate a task
+  // to the coding agent, the resulting bot-authored PR lists you as an
+  // assignee. So "assignee:@me" + bot author captures my agent PRs — and, by
+  // construction, excludes agent PRs I merely reviewed (those are assigned to
+  // whoever delegated them, not me).
+  const Q_MY_AGENT_PRS = `
     query {
-      search(query: "is:open is:pr reviewed-by:@me -author:@me", type: ISSUE, first: 50) {
+      search(query: "is:open is:pr assignee:@me", type: ISSUE, first: 50) {
         nodes { ... on PullRequest {
-          title number url updatedAt reviewDecision mergeable
+          title number url updatedAt isDraft reviewDecision mergeable
           author { __typename login }
           comments { totalCount }
           reviews(last: 20) { nodes { state author { login } } }
@@ -478,9 +483,9 @@
   }
 
   async function fetchDashboard(pat, filter) {
-    const [my, reviewed] = await Promise.all([
+    const [my, agent] = await Promise.all([
       graphqlRequest(pat, Q_MY_PRS),
-      graphqlRequest(pat, Q_REVIEWED_BY_ME),
+      graphqlRequest(pat, Q_MY_AGENT_PRS),
     ]);
     const login = my.viewer.login;
 
@@ -515,17 +520,28 @@
         return true;
       });
 
-    return {
-      login,
-      myPRs: my.search.nodes.filter(n => n?.title && !n.repository?.isArchived),
-      reviewRequestedPRs,
-      reviewedByMePRs: reviewed.search.nodes
-        .filter(n => n?.title && !n.repository?.isArchived)
-        // Only agent/bot-authored PRs I approved stay (I'm driving them through);
-        // human-authored PRs I approved are no longer my responsibility.
-        .filter(n => n.author?.__typename === 'Bot')
-        .filter(n => n.reviews?.nodes?.some(r => r.author?.login === login && r.state === 'APPROVED')),
-    };
+    // My board = PRs I authored + agent PRs opened on my behalf (bot-authored
+    // and assigned to me). Both flow through the same column logic; agent PRs
+    // are tagged so cards can label them. Dedupe in case a PR matches both.
+    const agentPRs = agent.search.nodes
+      .filter(n => n?.title && !n.repository?.isArchived)
+      .filter(n => n.author?.__typename === 'Bot')
+      .map(n => ({
+        ...n,
+        _agentPR: true,
+        _approvedByMe: n.reviews?.nodes?.some(r => r.author?.login === login && r.state === 'APPROVED'),
+      }));
+
+    const mineSeen = new Set();
+    const myPRs = [];
+    for (const pr of [...my.search.nodes.filter(n => n?.title && !n.repository?.isArchived), ...agentPRs]) {
+      const key = `${pr.number}/${pr.repository.nameWithOwner}`;
+      if (mineSeen.has(key)) continue;
+      mineSeen.add(key);
+      myPRs.push(pr);
+    }
+
+    return { login, myPRs, reviewRequestedPRs };
   }
 
   // ── Data processing ────────────────────────────────────────────────────
@@ -550,7 +566,7 @@
     return new Date(b.updatedAt) - new Date(a.updatedAt);
   }
 
-  function processData(myPRs, reviewRequestedPRs, reviewedByMePRs) {
+  function processData(myPRs, reviewRequestedPRs) {
     const columns = { stale: [], inProgress: [], reviewsTop: [], reviewsBottom: [], ready: [] };
     const seenKeys = new Set();
 
@@ -568,15 +584,6 @@
         seenKeys.add(key);
         columns.reviewsBottom.push(pr);
       }
-    }
-
-    for (const pr of reviewedByMePRs) {
-      const key = `${pr.number}/${pr.repository.nameWithOwner}`;
-      if (seenKeys.has(key)) continue;
-      seenKeys.add(key);
-      if (isStale(pr.updatedAt))     columns.stale.push(pr);
-      else if (isReadyToDeploy(pr))   columns.ready.push(pr);
-      else                            columns.reviewsTop.push({ ...pr, _approvedByMe: true });
     }
 
     for (const arr of Object.values(columns)) arr.sort(byUpdatedDesc);
@@ -612,6 +619,10 @@
     const changesRequested = pr.reviewDecision === 'CHANGES_REQUESTED';
 
     let badges = '';
+    // Agent PRs (Copilot, opened on my behalf) get a marker in every column so
+    // they read as "mine via an agent" rather than hand-authored by me.
+    if (pr._agentPR) badges += `<span class="badge badge-them">🤖 by ${escapeHtml(pr.author?.login ?? 'agent')}</span>`;
+
     if (variant === 'stale') {
       const days = Math.floor((Date.now() - new Date(pr.updatedAt)) / 86400000);
       badges += `<span class="badge badge-stale">💤 ${days}d idle</span>`;
@@ -619,13 +630,13 @@
     } else if (variant === 'inProgress') {
       badges += '<span class="badge badge-draft">draft</span>';
     } else if (variant === 'reviewsTop') {
-      badges += pr._approvedByMe
-        ? '<span class="badge badge-approved">✓ approved by me</span>'
-        : '<span class="badge badge-me">authored by me</span>';
+      if (!pr._agentPR) badges += '<span class="badge badge-me">authored by me</span>';
     } else if (variant === 'reviewsBottom') {
       badges += `<span class="badge badge-them">by ${escapeHtml(pr.author?.login ?? 'unknown')}</span>`;
     } else if (variant === 'ready') {
-      badges += '<span class="badge badge-deploy">✓ approved</span>';
+      badges += pr._approvedByMe
+        ? '<span class="badge badge-approved">✓ approved by me</span>'
+        : '<span class="badge badge-deploy">✓ approved</span>';
     }
 
     if (changesRequested) {
@@ -743,8 +754,8 @@
 
     try {
       hideError();
-      const { login, myPRs, reviewRequestedPRs, reviewedByMePRs } = await fetchDashboard(pat, getFilter());
-      const columns = processData(myPRs, reviewRequestedPRs, reviewedByMePRs);
+      const { login, myPRs, reviewRequestedPRs } = await fetchDashboard(pat, getFilter());
+      const columns = processData(myPRs, reviewRequestedPRs);
       render(columns, login);
       updateTimestamp();
     } catch (err) {
