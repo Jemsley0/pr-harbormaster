@@ -490,14 +490,16 @@
     const login = my.viewer.login;
 
     // Build the review-request searches that match the active filter.
+    // -is:draft: GitHub keeps review requests when a PR goes back to draft,
+    // and a draft is not ready for review.
     const searches = [];
     if (filter === 'you' || filter === 'all') {
-      searches.push('is:open is:pr review-requested:@me');
+      searches.push('is:open is:pr -is:draft review-requested:@me');
     }
     let teams = [];
     if (filter === 'team' || filter === 'all') {
       teams = await getMyTeams(pat, login);
-      for (const slug of teams) searches.push(`is:open is:pr team-review-requested:${slug}`);
+      for (const slug of teams) searches.push(`is:open is:pr -is:draft team-review-requested:${slug}`);
     }
 
     const requestedNodes = (await Promise.all(
